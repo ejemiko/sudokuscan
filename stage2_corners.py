@@ -8,6 +8,7 @@ import numpy as np
 BLOCK_FRAC = 0.005   # neighbourhood window: 0.5% of the longest side (5 px at 1000 px)
 KSIZE = 3            # Sobel aperture for the image derivatives
 K = 0.04             # Harris free parameter (typical range 0.04-0.06)
+THRES_FRAC = 0.01  # aday eşiği, R nin max inin %1 i
 
 
 def harris_response(gray):
@@ -29,9 +30,16 @@ def find_candidates(R):
     so that each physical corner gives exactly one point.
     Returns an (N, 2) array of (x, y) coordinates.
     """
-    # TODO (student): threshold + non-maximum suppression
-    raise NotImplementedError("find_candidates: student writes this")
-
+    threshold=THRES_FRAC*R.max()
+    strong = R > threshold
+    
+    R_max_local=cv2.dilate(R,np.ones((7,7),np.uint8))
+    is_peak = R == R_max_local
+    keep = strong & is_peak #keep hem eşiği geçen hem de 7x7 komşuluğunda en yüksek yanıtı veren pikselleri tutar
+    
+    candidates = np.argwhere(keep)[:,::-1]
+    return candidates
+    
 
 def select_corners(candidates, R, gray):
     """Chooses the four outer corners of the puzzle from the candidates.
