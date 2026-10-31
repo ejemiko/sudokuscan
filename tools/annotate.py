@@ -70,7 +70,7 @@ def main():
     for path in images:
         json_path = path.with_suffix(".json")
         data = json.loads(json_path.read_text()) if json_path.exists() else {}
-        if "corners" in data and not args.redo:
+        if data.get("corners") and not args.redo:
             continue
         corners = annotate(path)
         if corners is None:
