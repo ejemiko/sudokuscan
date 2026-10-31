@@ -9,6 +9,10 @@ BLOCK_FRAC = 0.005   # neighbourhood window: 0.5% of the longest side (5 px at 1
 KSIZE = 3            # Sobel aperture for the image derivatives
 K = 0.04             # Harris free parameter (typical range 0.04-0.06)
 THRES_FRAC = 0.01  # aday eşiği, R nin max inin %1 i
+MIN_REGION_FRAC = 0.01 ## bölge en az görüntünün %1'i olmalı (harfleri, rakamları eler)
+APPROX_FRAC = 0.02  # Çokgen sadeleştirme toleransı: hull çevresinin %2'si
+MAX_REGION_FRAC = 0.48   # sudoku görüntünün en fazla %48'i olabilir (masa/kağıt gibi büyük şekilleri eler)
+MAX_INK_FRAC = 0.27      # dörtgenin içi en fazla %27 mürekkep olabilir (defter, telefon, fotoğrafı eler)
 
 
 def harris_response(gray):
@@ -39,13 +43,63 @@ def find_candidates(R):
     
     candidates = np.argwhere(keep)[:,::-1]
     return candidates
-    
 
+
+def find_puzzle_region(gray, candidates):
+    """Finds the quadrilateral region of the puzzle grid."""
+    g8 = gray.astype(np.uint8)
+    otsu_t,bw = cv2.threshold(g8,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    contours,hierarchy = cv2.findContours(bw,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+    
+    H,W=gray.shape
+    best_quad = None
+    best_count = 0
+    
+    for i, contour in enumerate(contours):
+        if hierarchy[0, i, 3] != -1:
+            continue
+        
+        if cv2.contourArea(contour) < MIN_REGION_FRAC * H * W:
+            continue
+        
+        hull = cv2.convexHull(contour)
+        epsilon = APPROX_FRAC * cv2.arcLength(hull, True)
+        quad = cv2.approxPolyDP(hull, epsilon, True)
+
+        if len(quad) != 4:
+            continue
+        
+        if cv2.contourArea(quad) > MAX_REGION_FRAC * H * W:
+            continue
+        
+        mask = np.zeros_like(bw)
+        cv2.fillPoly(mask, [quad], 255)
+        ink = (bw[mask > 0] > 0).mean()
+        
+        if ink > MAX_INK_FRAC:
+            continue
+        
+        count = 0
+        for x, y in candidates:
+            result = cv2.pointPolygonTest(quad, (float(x), float(y)), False)
+            if result >= 0:
+                count += 1
+                
+        if count > best_count:
+            best_count = count
+            best_quad = quad
+            
+    return best_quad
+        
+        
+    
 def select_corners(candidates, R, gray):
     """Chooses the four outer corners of the puzzle from the candidates.
 
     Must ignore candidates from background clutter, the page edge and other text.
     Returns a (4, 2) array ordered TL, TR, BR, BL, or None if no puzzle is found.
     """
-    # TODO (student): corner-selection rule
+    
+    
+    
     raise NotImplementedError("select_corners: student writes this")
