@@ -12,11 +12,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from preprocess import preprocess
-from corners import harris_response, find_candidates, select_corners
-from rectify import rectify
-from recognize import recognize
-from validate import validate
+from stage1_preprocess import preprocess
+from stage2_corners import harris_response, find_candidates, select_corners
+from stage3_rectify import rectify
+from stage5_recognize import recognize
+from stage6_validate import validate
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 EMPTY_GRID = [[0] * 9 for _ in range(9)]
