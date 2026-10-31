@@ -13,6 +13,7 @@ MIN_REGION_FRAC = 0.01 ## bölge en az görüntünün %1'i olmalı (harfleri, ra
 APPROX_FRAC = 0.02  # Çokgen sadeleştirme toleransı: hull çevresinin %2'si
 MAX_REGION_FRAC = 0.48   # sudoku görüntünün en fazla %48'i olabilir (masa/kağıt gibi büyük şekilleri eler)
 MAX_INK_FRAC = 0.27      # dörtgenin içi en fazla %27 mürekkep olabilir (defter, telefon, fotoğrafı eler)
+MARGIN_FRAC = 0.03  # Bölge dışına tolerans: yaklaşık grid kenarının %3'ü
 
 
 def harris_response(gray):
@@ -88,18 +89,38 @@ def find_puzzle_region(gray, candidates):
         if count > best_count:
             best_count = count
             best_quad = quad
-            
     return best_quad
-        
-        
-    
-def select_corners(candidates, R, gray):
-    """Chooses the four outer corners of the puzzle from the candidates.
+                
 
-    Must ignore candidates from background clutter, the page edge and other text.
-    Returns a (4, 2) array ordered TL, TR, BR, BL, or None if no puzzle is found.
-    """
+def select_corners(candidates, R, gray):
+    """Chooses the four outer corners of the puzzle."""
+    quad = find_puzzle_region(gray, candidates)
     
+    if quad is None:
+        return None
     
+    side = np.sqrt(cv2.contourArea(quad))
+    margin = MARGIN_FRAC * side
+
+    inside = []
+    for x, y in candidates:
+        distance = cv2.pointPolygonTest(
+            quad, (float(x), float(y)), True
+        )
+        if distance >= -margin: #içerideki, sınırdaki ve dışarıda tolerans mesafesi içindeki adayları tutar
+            inside.append((x, y))
+
+    inside = np.array(inside)
     
-    raise NotImplementedError("select_corners: student writes this")
+    if len(inside) < 4:
+        return None
+
+    s = inside[:, 0] + inside[:, 1]
+    d = inside[:, 0] - inside[:, 1]
+
+    tl = inside[np.argmin(s)]
+    tr = inside[np.argmax(d)]
+    br = inside[np.argmax(s)]
+    bl = inside[np.argmin(d)]
+
+    return np.array([tl, tr, br, bl], dtype=np.float32)
