@@ -8,7 +8,8 @@ import numpy as np
 BLOCK_FRAC = 0.005   # neighbourhood window: 0.5% of the longest side (5 px at 1000 px)
 KSIZE = 3            # Sobel aperture for the image derivatives
 K = 0.04             # Harris free parameter (typical range 0.04-0.06)
-THRES_FRAC = 0.002  # aday eşiği: R'ın maksimumunun %0.2'si (eğik fotoğraflarda uzak köşeler zayıf, 0.01'de kayboluyordu)MIN_REGION_FRAC = 0.01 ## bölge en az görüntünün %1'i olmalı (harfleri, rakamları eler)
+THRES_FRAC = 0.002  # aday eşiği: R'ın maksimumunun %0.2'si (eğik fotoğraflarda uzak köşeler zayıf, 0.01'de kayboluyordu)
+MIN_REGION_FRAC = 0.01 ## bölge en az görüntünün %1'i olmalı (harfleri, rakamları eler)
 APPROX_FRAC = 0.02  # Çokgen sadeleştirme toleransı: hull çevresinin %2'si
 MAX_REGION_FRAC = 0.48   # sudoku görüntünün en fazla %48'i olabilir (masa/kağıt gibi büyük şekilleri eler)
 MAX_INK_FRAC = 0.27      # dörtgenin içi en fazla %27 mürekkep olabilir (defter, telefon, fotoğrafı eler)
