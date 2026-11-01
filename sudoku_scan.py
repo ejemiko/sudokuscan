@@ -15,7 +15,7 @@ import numpy as np
 from stage1_preprocess import preprocess
 from stage2_corners import harris_response, find_candidates, select_corners
 from stage3_rectify import rectify
-from stage5_recognize import recognize
+from stage5_recognize import recognize, draw_debug
 from stage6_validate import validate
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -79,13 +79,14 @@ def process_image(path, outdir):
         result["a4_rms_px"] = rect["a4_rms_px"]
 
         # Stage 5: cells + OCR on the H4 rectification
-        grid, debug_img = recognize(rect["images"]["H4"])
+        grid, _ = recognize(rect["images"]["H4"])
         result["grid"] = grid
 
-        # Stage 6: sudoku rules check
+        # Stage 6: sudoku rules check; the debug image marks conflicting cells in red
         verdict, conflicts = validate(grid)
         result["verdict"] = verdict
         result["conflicts"] = conflicts
+        debug_img = draw_debug(rect["images"]["H4"], grid, conflicts)
         cv2.imwrite(str(outdir / f"{name}_debug.png"), debug_img)
 
     except Exception as e:
