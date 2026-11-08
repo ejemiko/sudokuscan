@@ -1,28 +1,29 @@
 # SudokuScan
 
-COMP 482 Computer Vision, Project 1 · Ecem Yaşar (332501003) · MEF University
+COMP 482 Bilgisayarlı Görü, Proje 1 · Ecem Yaşar (332501003) · MEF Üniversitesi
 
-SudokuScan finds a printed sudoku in a phone photo, detects its four outer corners with the
-Harris detector, rectifies the grid with three geometric models (A3, A4, H4), reads the 81 cells
-with Tesseract and checks the result against the sudoku rules.
+SudokuScan, telefonla çekilmiş bir fotoğraftaki basılı sudokuyu bulur, dört dış köşesini Harris
+dedektörüyle tespit eder, ızgarayı üç geometrik modelle (A3, A4, H4) düzeltir, 81 hücreyi
+Tesseract ile okur ve sonucu sudoku kurallarına göre kontrol eder.
 
-## Pipeline
+## Aşamalar
 
-| Stage | File | What it does |
+| Aşama | Dosya | Ne yapar |
 |---|---|---|
-| 1 | `stage1_preprocess.py` | Downscale (longest side 1000 px), grayscale, Gaussian denoising, illumination correction (division by an estimated background) |
-| 2 | `stage2_corners.py` | Harris response map, candidate points (relative threshold + 7×7 non-maximum suppression), puzzle-region search, selection of the four outer corners |
-| 3 | `stage3_rectify.py` | A3: affine from three corners (TL, TR, BL); A4: least-squares affine from four corners; H4: homography from four corners. Target 450×450 px. Reports the A3 fourth-corner error and the A4 RMS residual |
-| 4 | `stage4_residual.py`, `stage4_grid.py`, `stage4_ocr.py` | Affine versus homography comparison (see below) |
-| 5 | `stage5_recognize.py` | 81 cells with a 4 px inner margin, grid-line remnant removal, empty/filled decision before OCR, cell preparation, Tesseract (`--psm 8`, whitelist 1–9) |
-| 6 | `stage6_validate.py` | Repeated digits in rows, columns and 3×3 boxes → `valid` / `invalid`, conflicting cells marked in the debug image |
+| 1 | `stage1_preprocess.py` | Küçültme (uzun kenar 1000 px), gri tonlama, Gauss ile gürültü azaltma, aydınlatma düzeltme (tahmin edilen arka plana bölme) |
+| 2 | `stage2_corners.py` | Harris yanıt haritası, aday noktalar (göreli eşik + 7×7 maksimum olmayanları bastırma), bulmaca bölgesinin bulunması, dört dış köşenin seçimi |
+| 3 | `stage3_rectify.py` | A3: üç köşeden (TL, TR, BL) afin; A4: dört köşeden en küçük kareler ile afin; H4: dört köşeden homografi. Hedef 450×450 px. A3 dördüncü köşe hatasını ve A4 RMS artığını raporlar |
+| 4 | `stage4_residual.py`, `stage4_grid.py`, `stage4_ocr.py` | Afin ve homografi karşılaştırması (aşağıda) |
+| 5 | `stage5_recognize.py` | 4 px iç kenar paylı 81 hücre, ızgara çizgisi kalıntılarının silinmesi, OCR'dan önce boş/dolu kararı, hücre hazırlama, Tesseract (`--psm 8`, izinli karakterler 1–9) |
+| 6 | `stage6_validate.py` | Satır, sütun ve 3×3 kutularda tekrar eden rakamlar → `valid` / `invalid`; çakışan hücreler debug görüntüsünde işaretlenir |
 
-The four final corners always come from `cv2.cornerHarris`. Contours are only used to find the
-region that contains the puzzle; their vertices are never used as corner coordinates.
+Son dört köşe her zaman `cv2.cornerHarris` ile bulunan noktalardır. Konturlar yalnızca
+bulmacayı içeren bölgeyi bulmak için kullanılır; köşeleri hiçbir zaman köşe koordinatı olarak
+kullanılmaz.
 
-## Installation
+## Kurulum
 
-Python 3.10 or newer (developed with Python 3.14 on macOS).
+Python 3.10 veya üstü (macOS'ta Python 3.14 ile geliştirildi).
 
 ```bash
 python3 -m venv .venv
@@ -30,104 +31,104 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**OCR engine.** `pytesseract` is only a wrapper; the Tesseract program itself must be installed
-(developed with Tesseract 5.5):
+**OCR motoru.** `pytesseract` yalnızca bir arayüzdür; Tesseract programının ayrıca kurulması
+gerekir (Tesseract 5.5 ile geliştirildi):
 
-| System | Command |
+| Sistem | Komut |
 |---|---|
 | macOS (Homebrew) | `brew install tesseract` |
 | Ubuntu / Debian | `sudo apt install tesseract-ocr` |
-| Windows | installer from https://github.com/UB-Mannheim/tesseract/wiki, then add it to `PATH` |
+| Windows | https://github.com/UB-Mannheim/tesseract/wiki adresindeki kurulum dosyası, ardından `PATH`'e ekleyin |
 
-Check with `tesseract --version`.
+Kontrol için: `tesseract --version`.
 
-## Usage
+## Kullanım
 
 ```bash
-python sudoku_scan.py --input photo.jpg --outdir out/          # one image
-python sudoku_scan.py --batch images_dir/ --outdir results/    # grader mode
+python sudoku_scan.py --input photo.jpg --outdir out/          # tek görüntü
+python sudoku_scan.py --batch images_dir/ --outdir results/    # değerlendirme modu
 ```
 
-For every input image `<name>` the output directory receives:
+Her girdi görüntüsü `<ad>` için çıktı klasörüne şunlar yazılır:
 
-| File | Content |
+| Dosya | İçerik |
 |---|---|
-| `<name>_grid.txt` | 9 lines of 9 digits, 0 for empty cells (from the H4 rectification) |
-| `<name>_result.json` | corners (TL, TR, BR, BL in original pixels), A3, A4, H4 matrices, `a3_corner_err_px`, `a4_rms_px`, grid, verdict, conflicts, runtime |
-| `<name>_harris.png` | Harris response map with all candidates (green) and the four selected corners (red) |
-| `<name>_rect_A3.png`, `_rect_A4.png`, `_rect_H4.png` | the three 450×450 rectifications |
-| `<name>_debug.png` | H4 rectification with cell boxes, recognised digits and conflicting cells (red) |
+| `<ad>_grid.txt` | 9 satır × 9 rakam, boş hücreler 0 (H4 düzeltmesinden) |
+| `<ad>_result.json` | köşeler (orijinal piksellerde TL, TR, BR, BL), A3, A4, H4 matrisleri, `a3_corner_err_px`, `a4_rms_px`, ızgara, sonuç, çakışmalar, süre |
+| `<ad>_harris.png` | bütün adaylar (yeşil) ve seçilen dört köşe (kırmızı) ile Harris yanıt haritası |
+| `<ad>_rect_A3.png`, `_rect_A4.png`, `_rect_H4.png` | üç adet 450×450 düzeltilmiş görüntü |
+| `<ad>_debug.png` | hücre kutuları, okunan rakamlar ve çakışan hücreler (kırmızı) ile H4 görüntüsü |
 
-The program never crashes on a bad image: if no puzzle is found it writes a result file with
-`"verdict": "not_found"`.
+Program hatalı bir görüntüde çökmez: bulmaca bulunamazsa `"verdict": "not_found"` içeren bir
+sonuç dosyası yazar.
 
-## Evaluation
+## Değerlendirme
 
 ```bash
 python sudoku_scan.py --batch data/ --outdir results/
 python evaluate.py --results results/ --data data/
 ```
 
-`evaluate.py` computes the Section 7 metrics (corner error, cell accuracy, empty-cell F1, grid
-exact match, robustness), overall and per condition C1–C5.
+`evaluate.py`, ödevin 7. bölümündeki metrikleri (köşe hatası, hücre doğruluğu, boş hücre F1,
+tam ızgara eşleşmesi, sağlamlık) toplamda ve C1–C5 koşullarına göre hesaplar.
 
-Results on the personal dataset (15 photos):
+Kişisel veri setindeki sonuçlar (15 fotoğraf):
 
-| Corner error | Cell accuracy | Empty-cell F1 | Exact match | Robustness | Time per photo |
+| Köşe hatası | Hücre doğruluğu | Boş hücre F1 | Tam eşleşme | Sağlamlık | Fotoğraf başına süre |
 |---|---|---|---|---|---|
-| 0.93 % | 97.4 % | 0.983 | 86.7 % | 100 % | 1.3–2.8 s |
+| %0,93 | %97,4 | 0,983 | %86,7 | %100 | 1,3–2,8 s |
 
-## Stage 4: affine versus homography
+## Stage 4: afin ve homografi
 
-Run after the batch command above (the scripts read `results/`):
-
-```bash
-python stage4_residual.py   # A3 fourth-corner error and A4 RMS vs obliqueness -> out/stage4/residual_vs_obliqueness.png
-python stage4_grid.py       # deviation of the grid lines from the ideal positions (projection profiles)
-python stage4_ocr.py        # OCR cell accuracy on the A3, A4 and H4 rectifications
-```
-
-Obliqueness is the larger of the two opposite-side length ratios (long/short) of the detected
-quadrilateral; it is 1 for a frontal view.
-
-## Tests and experiments
+Yukarıdaki batch komutundan sonra çalıştırın (betikler `results/` klasörünü okur):
 
 ```bash
-python tests/test_stage1.py   # preprocessing
-python tests/test_stage2.py   # corner error against the annotations
-python tests/test_stage3.py   # A3 / A4 / H4 and their residuals
-python tests/test_stage5.py   # cell accuracy, empty-cell F1, with/without preparation, psm modes, confusions
-python tests/test_stage6.py   # validity check
+python stage4_residual.py   # eğikliğe göre A3 dördüncü köşe hatası ve A4 RMS -> out/stage4/residual_vs_obliqueness.png
+python stage4_grid.py       # ızgara çizgilerinin ideal konumlardan sapması (izdüşüm profilleri)
+python stage4_ocr.py        # A3, A4 ve H4 düzeltmeleri üzerinde OCR hücre doğruluğu
 ```
 
-Experiments used to choose parameters (`experiments/`):
+Eğiklik, tespit edilen dörtgenin iki karşılıklı kenar oranının (uzun/kısa) büyüğüdür; dik
+çekimde 1'dir.
 
-| Script | Purpose |
+## Testler ve deneyler
+
+```bash
+python tests/test_stage1.py   # ön işleme
+python tests/test_stage2.py   # etiketlere göre köşe hatası
+python tests/test_stage3.py   # A3 / A4 / H4 ve artıkları
+python tests/test_stage5.py   # hücre doğruluğu, boş hücre F1, hazırlıklı/hazırlıksız, psm modları, karışıklıklar
+python tests/test_stage6.py   # geçerlilik kontrolü
+```
+
+Parametre seçiminde kullanılan deneyler (`experiments/`):
+
+| Betik | Amaç |
 |---|---|
-| `harris_test.py` | first look at the Harris threshold and blockSize |
-| `param_study.py` | Harris parameter study (blockSize, ksize, k) on all photos |
-| `stage5_margin.py`, `stage5_margin_ocr.py` | choice of the cell margin |
-| `stage5_empty.py` | choice of the empty-cell threshold |
+| `harris_test.py` | Harris eşiğine ve blockSize'a ilk bakış |
+| `param_study.py` | bütün fotoğraflarda Harris parametre çalışması (blockSize, ksize, k) |
+| `stage5_margin.py`, `stage5_margin_ocr.py` | hücre kenar payının seçimi |
+| `stage5_empty.py` | boş hücre eşiğinin seçimi |
 
-Debug images are written to `out/`.
+Debug görüntüleri `out/` klasörüne yazılır.
 
-## Repository layout
+## Repo yapısı
 
 ```
-sudoku_scan.py            command-line interface, runs all stages
+sudoku_scan.py            komut satırı programı, bütün aşamaları çalıştırır
 stage1_preprocess.py ... stage6_validate.py
 stage4_residual.py, stage4_grid.py, stage4_ocr.py
-evaluate.py               Section 7 metrics
-tests/                    one test script per stage
-experiments/              parameter studies
-tools/annotate.py         corner annotation tool
-tools/fill_metadata.py    writes grids and conditions into the annotation files
-data/                     personal dataset: photos + annotations (Appendix A format)
+evaluate.py               7. bölüm metrikleri
+tests/                    her aşama için bir test betiği
+experiments/              parametre çalışmaları
+tools/annotate.py         köşe etiketleme aracı
+tools/fill_metadata.py    ızgaraları ve koşulları etiket dosyalarına yazar
+data/                     kişisel veri seti: fotoğraflar + etiketler (Ek A formatı)
 ```
 
-## Use of AI tools
+## Yapay zekâ kullanımı
 
-Claude (Anthropic) was used as described in `AI_LOG.md` and in Appendix C of the report.
-The corner-selection logic (`find_candidates`, `find_puzzle_region`, `select_corners` in
-`stage2_corners.py`) and the Stage 4 comparison analysis (`stage4_residual.py`,
-`stage4_grid.py`, `stage4_ocr.py`) were written by me without AI-generated code.
+Claude (Anthropic), `AI_LOG.md` dosyasında ve raporun Ek C'sinde anlatıldığı şekilde kullanıldı.
+Köşe seçim mantığını (`stage2_corners.py` içindeki `find_candidates`, `find_puzzle_region`,
+`select_corners`) ve Stage 4 karşılaştırma analizini (`stage4_residual.py`, `stage4_grid.py`,
+`stage4_ocr.py`) yapay zekâ kodu kullanmadan ben yazdım.
