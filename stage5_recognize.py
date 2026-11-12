@@ -7,7 +7,7 @@ GRID = 9
 MARGIN = 4          # px cut from every side of a cell (experiments/stage5_margin*.py)
 EDGE_DIST = 6       # width of the outer band of a cell where grid-line remnants live (px)
 NOISE_AREA = 15     # ink components smaller than this (px) are noise specks
-EMPTY_FRAC = 0.02   # PROVISIONAL: empty if the largest ink component covers less than this
+EMPTY_FRAC = 0.02   # boş hücreler ~0, dolu en az %3,7 -> aradaki boşluğun ortası; seçen: experiments/stage5_empty.py
                     # share of the cell; chosen with experiments/stage5_empty.py
 OCR_HEIGHT = 40     # the digit is scaled to this height before OCR (px)
 PAD = 20            # white border added around the digit (px)
